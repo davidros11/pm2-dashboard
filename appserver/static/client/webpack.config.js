@@ -40,7 +40,7 @@ module.exports = {
   // Telling webpack which extensions
   // we are interested in.
   resolve: {
-    extensions: [".tsx", ".ts", ".js"],
+    extensions: [".tsx", ".ts", ".js"]
   },
 
   // What file name should be used for the result file,

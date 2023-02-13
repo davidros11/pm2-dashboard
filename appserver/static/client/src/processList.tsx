@@ -11,37 +11,6 @@ import {
 import Process from './process'
 import utils from './utils'
 
-  const buttonStyle = {
-    color: "black",
-    backgroundColor: "White",
-    width: "100%",
-    fontSize: 12,
-    border: '4px solid lightblue',
-    marginBottom: '10px',
-    marginLeft: '1px',
-    marginTop: '5px',
-    height: '13%',
-    position: 'sticky'
-    //fontFamily: "Arial"
-  }
-
-let clone = Object.assign({}, buttonStyle)
-clone.backgroundColor = 'lightblue'
-
-const cButtonStyle = Object.assign({}, clone);
-
-function icons(status: string)  {
-    switch(status) {
-        case 'online': return '🟢';
-        case 'stopped': return '🔴';
-        case 'errored': return '🟣';
-        case 'stopping': return '🟠';
-        case 'launching': return '🟡';
-        default: return '⚫️'
-    }
-    
-}
-
 function statusToNum(status: string) {
     switch(status) {
         case 'online': return 5;
@@ -62,48 +31,20 @@ function sortMap() {
         'uptime': (a: Process, b: Process) => a.pm2_env.pm_uptime - b.pm2_env.pm_uptime,
         'cpu': (a: Process, b: Process) => a.monit.cpu - b.monit.cpu,
         'memory': (a: Process, b: Process) => a.monit.memory - b.monit.memory,
-        'restarts': (a: Process, b: Process) => a.pm2_env.restart_time- b.pm2_env.pm_uptime,
+        'restarts': (a: Process, b: Process) => a.pm2_env.restart_time- b.pm2_env.restart_time,
         'unstable restarts': (a: Process, b: Process) => a.pm2_env.unstable_restarts - b.pm2_env.unstable_restarts
     }
     return new Map(Object.entries(funcs));
 }
 
-function makeButton(pm2Data: Process, onClickFunc: Function, is_current: boolean, key: number) {
-    return (<Row  key={key.toString()} style={is_current ? cButtonStyle : buttonStyle} onClick={() => onClickFunc(pm2Data)}>
-                <Container>
-                    <Row>
-                        <Col>
-                            <p>{pm2Data.name}</p>
-                        </Col>
-                        <Col>
-                            <p> PID {pm2Data.pid}</p>
-                        </Col>
-                        <Col>
-                            <p>CPU {pm2Data.monit.cpu}%</p>
-                        </Col>
-                    </Row>
-                    <Row>
-                        <Col>
-                            <p style={{color: pm2Data.pm2_env.status_color}}>
-                                {icons(pm2Data.pm2_env.status) + ' ' + pm2Data. pm2_env.status}
-                            </p>
-                            
-                        </Col>
-                        
-                        <Col>
-                            Restarts {pm2Data.pm2_env.restart_time}
-                        </Col>
-                        <Col>
-                            <p>Ram {utils.memoryFormat(pm2Data.monit.memory)}</p>
-                        </Col>
-                    </Row>
-                </Container>    
-            </Row>
-    )
-}
-
 const sorterMap = sortMap();
 
+/**
+ * Sorts a process array in-place.
+ * @param processes Process array
+ * @param member string that determines the property to sort by
+ * @param ascending True if the sort sgould be in ascending order
+ */
 function sortProcesses(processes: Process[], member: string, ascending: boolean) {
     let compareFn = (a: Process, b: Process) => a.pm_id - b.pm_id;
     if (sorterMap.has(member)) {
@@ -114,6 +55,80 @@ function sortProcesses(processes: Process[], member: string, ascending: boolean)
     } else {
         processes.sort(compareFn);
     }
+}
+
+/** Style for process button */
+const buttonStyle = {
+    color: "black",
+    backgroundColor: "White",
+    width: "100%",
+    fontSize: 12,
+    border: '4px solid lightblue',
+    marginBottom: '10px',
+    marginLeft: '1px',
+    marginTop: '5px',
+    height: '13%',
+    position: 'sticky'
+    //fontFamily: "Arial"
+  }
+
+let clone = Object.assign({}, buttonStyle)
+clone.backgroundColor = 'lightblue'
+
+/** Style for highlighted button */
+const cButtonStyle = Object.assign({}, clone);
+
+function icons(status: string)  {
+    switch(status) {
+        case 'online': return '🟢';
+        case 'stopped': return '🔴';
+        case 'errored': return '🟣';
+        case 'stopping': return '🟠';
+        case 'launching': return '🟡';
+        default: return '⚫️'
+    }
+    
+}
+
+/**
+ * Makes a button for the Processs list
+ * @param process The data
+ * @param onClickFunc Function that is called when clicked
+ * @param is_current true if the button should be highlighted
+ * @returns Row with a button
+ */
+function makeButton(process: Process, onClickFunc: Function, is_current: boolean) {
+    return (<Row  key={process.pm_id.toString()} style={is_current ? cButtonStyle : buttonStyle} onClick={() => onClickFunc(process)}>
+                <Container>
+                    <Row>
+                        <Col>
+                            <p>{process.name}</p>
+                        </Col>
+                        <Col>
+                            <p> PID {process.pid}</p>
+                        </Col>
+                        <Col>
+                            <p>CPU {process.monit.cpu}%</p>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col>
+                            <p style={{color: process.pm2_env.status_color}}>
+                                {icons(process.pm2_env.status) + ' ' + process.pm2_env.status}
+                            </p>
+                            
+                        </Col>
+                        
+                        <Col>
+                            Restarts {process.pm2_env.restart_time}
+                        </Col>
+                        <Col>
+                            <p>Ram {utils.memoryFormat(process.monit.memory)}</p>
+                        </Col>
+                    </Row>
+                </Container>    
+            </Row>
+    )
 }
 
 /**
@@ -133,13 +148,12 @@ function sortProcesses(processes: Process[], member: string, ascending: boolean)
  */
 const ProcessList = (props: {processes: Process[], sortBy: string, ascending: boolean, current: number
     onclickProcessButtons: Function, onSort: Function, flipOrder: Function}) => {
-
     sortProcesses(props.processes, props.sortBy,props.ascending);
     let buttons = []
     for(let process of props.processes) {
         const key = process.pm_id
         let isCurrent = (key === props.current) ? true : false
-        buttons.push(makeButton(process, props.onclickProcessButtons, isCurrent, key))
+        buttons.push(makeButton(process, props.onclickProcessButtons, isCurrent))
     }
     let dropdowns = [];
         for(const key of sorterMap.keys()) {
@@ -161,7 +175,7 @@ const ProcessList = (props: {processes: Process[], sortBy: string, ascending: bo
     </Row>
     <Row>
         <Container style={{borderColor: 'lightblue', width: '100%', overflow: 'scroll',
-        maxHeight: '700px', border: '2px solid lightblue', borderRadius: '5px'}}>
+        height: '700px', border: '2px solid lightblue', borderRadius: '5px'}}>
             {buttons}
         </Container>
     </Row>

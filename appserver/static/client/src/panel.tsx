@@ -9,13 +9,13 @@ import Process from "./process"
 import Connecter from './connecter'
 import ProcessList from "./processList"
 
-class Panel extends React.Component<{}, {processes: Map<number, Process>, current: number, sortBy: string, ascending: boolean}> {
-    connecter = new Connecter();
+class Panel extends React.Component<{connecter: Connecter}, {processes: Map<number, Process>, current: number, sortBy: string, ascending: boolean}> {
     
-    constructor(props: Readonly<{}>) {
+    constructor(props: Readonly<{connecter: Connecter}>) {
         super(props)
         this.state = { processes: new Map<number, Process>(), current: -1, sortBy: 'default', ascending: false}
         this.onclickProcessButtons = this.onclickProcessButtons.bind(this);
+        this.onClickInfoButtons = this.onClickInfoButtons.bind(this);
         this.onSort = this.onSort.bind(this);
         this.flipOrder = this.flipOrder.bind(this);
     }
@@ -26,20 +26,17 @@ class Panel extends React.Component<{}, {processes: Map<number, Process>, curren
 
     onClickInfoButtons(id: number, action: string) {
         switch(action.toLowerCase()) {
-            case 'start': this.connecter.startProcess(id);
+            case 'restart': this.props.connecter.restartProcess(id);
                 break;
-            case 'restart': this.connecter.restartProcess(id);
+            case 'stop': this.props.connecter.stopProcess(id);
                 break;
-            case 'stop': this.connecter.stopProcess(id);
-                break;
-            case 'delete': this.connecter.deleteProcess(id);
+            case 'delete': this.props.connecter.deleteProcess(id);
                 break;
             default: break;
         }
     }
 
     onSort(member: string) {
-        console.log(member)
         this.setState({sortBy: member})
     }
 
@@ -50,21 +47,24 @@ class Panel extends React.Component<{}, {processes: Map<number, Process>, curren
     updateProcesses(processes: Map<number, Process>) {
         const [key] = processes.keys();
         const current = (processes.has(this.state.current)) ? this.state.current : key
+        let a = processes.get(current)
+        if (a == undefined) {
+            this.setState({ processes: processes})
+            return
+        }
+        a.pm2_env.logs = this.props.connecter.getLogFile(current)
         this.setState({ processes: processes, current: current})
     }
 
     componentDidMount() {
-        this.connecter.addListener(this)
+        this.props.connecter.addListener(this)
     }
 
     componentWillUnmount() {
-        this.connecter.removeListener(this)
+        this.props.connecter.removeListener(this)
     }
 
     render() {
-        if (this.state.processes.size == 0) {
-            return <h1 style={{textAlign: 'center'}}>Loading...</h1>
-        }
         let current_info = null;
         let processes = [...this.state.processes.values()];
         if (processes.length != 0) {

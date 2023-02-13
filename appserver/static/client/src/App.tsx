@@ -1,11 +1,12 @@
 import React from "react";
 import Panel from './panel'
-
-console.log("TEEEST");
+import Connecter from "./connecter";
 
 class App extends React.Component {
     render() {
-        return <div style={{ marginTop:'10px' }}><Panel/></div>;
+        let connecter = new Connecter()
+        connecter.begin()
+        return <div style={{ marginTop:'10px' }}><Panel connecter={connecter}/></div>;
     }
 };
 
